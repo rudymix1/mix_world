@@ -1,0 +1,347 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIX WORLD</title>
+<style>
+body {
+  margin: 0;
+  background: #101827;
+  color: white;
+  font-family: Arial;
+}
+header {
+  background: #087cf0;
+  padding: 20px;
+  text-align: center;
+}
+main {
+  max-width: 500px;
+  margin: 30px auto;
+  padding: 15px;
+}
+.card {
+  background: #1e293b;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+}
+input, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 7px;
+  border: none;
+}
+button {
+  background: #087cf0;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 7px;
+  cursor: pointer;
+  margin: 5px 0;
+}
+.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+<h1>🌎 MIX WORLD</h1>
+<p>Un mundo para compartir</p>
+</header>
+
+<main>
+
+<div class="card" id="registro">
+<h2>Crear cuenta</h2>
+<input id="nuevoNombre" placeholder="Nombre de usuario">
+<input id="nuevaClave" type="password"
+placeholder="Contraseña">
+<button onclick="registrar()">Registrarme</button>
+</div>
+
+<div class="card" id="inicio">
+<h2>Iniciar sesión</h2>
+<input id="usuario" placeholder="Nombre de usuario">
+<input id="clave" type="password"
+placeholder="Contraseña">
+<button onclick="entrar()">Entrar</button>
+<p id="mensaje"></p>
+</div>
+<div class="card">
+<h2>👥 Miembros de MIX WORLD</h2>
+<div id="listaUsuarios"></div>
+</div>
+<div class="card">
+<h2>📰 Muro de MIX WORLD</h2>
+
+<textarea id="nuevoPost"
+placeholder="¿Qué quieres compartir con el mundo?"></textarea>
+
+<button onclick="publicarPost()">Publicar</button>
+
+<div id="muro"></div>
+</div>
+
+<div class="card hidden" id="perfil">
+<h2>Mi perfil</h2>
+<h3 id="saludo"></h3>
+<textarea id="descripcion"
+placeholder="Escribe algo sobre ti"></textarea>
+<button onclick="guardarPerfil()">Guardar perfil</button>
+<button onclick="salir()">Cerrar sesión</button>
+<p id="estado"></p>
+</div>
+
+</main>
+
+<script>
+function usuarios() {
+  return JSON.parse(localStorage.getItem("mw_usuarios") || "[]");
+}
+
+function registrar() {
+  let nombre = document.getElementById("nuevoNombre").value.trim();
+  let clave = document.getElementById("nuevaClave").value;
+
+  if (!nombre || !clave) {
+    alert("Completa todos los campos");
+    return;
+  }
+
+  let lista = usuarios();
+
+  if (lista.some(u => u.nombre.toLowerCase() === nombre.toLowerCase())) {
+    alert("Ese usuario ya existe");
+    return;
+  }
+
+  lista.push({
+    nombre: nombre,
+    clave: clave,
+    descripcion: ""
+  });
+
+  localStorage.setItem("mw_usuarios", JSON.stringify(lista));
+
+  alert("¡Cuenta creada! Ya puedes iniciar sesión.");
+  document.getElementById("nuevoNombre").value = "";
+  document.getElementById("nuevaClave").value = "";
+}
+
+function entrar() {
+  let nombre = document.getElementById("usuario").value.trim();
+  let clave = document.getElementById("clave").value;
+
+  let cuenta = usuarios().find(u =>
+    u.nombre.toLowerCase() === nombre.toLowerCase()
+    && u.clave === clave
+  );
+
+  if (!cuenta) {
+    document.getElementById("mensaje").textContent =
+      "Usuario o contraseña incorrectos";
+    return;
+  }
+
+  localStorage.setItem("mw_sesion", cuenta.nombre);
+  mostrarPerfil();
+}
+
+function mostrarUsuarios() {
+  let lista = usuarios();
+  let contenedor = document.getElementById("listaUsuarios");
+
+  if (lista.length === 0) {
+    contenedor.textContent = "Todavía no hay miembros.";
+    return;
+  }
+
+  contenedor.innerHTML = "";
+
+  lista.forEach(u => {
+    let persona = document.createElement("div");
+    persona.style.padding = "10px";
+    persona.style.borderBottom = "1px solid #475569";
+    persona.textContent = "👤 " + u.nombre;
+    contenedor.appendChild(persona);
+  });
+}
+function obtenerPosts() {
+  return JSON.parse(
+    localStorage.getItem("mw_publicaciones") || "[]"
+  );
+}
+
+function publicarPost() {
+  let autor = localStorage.getItem("mw_sesion");
+  let texto = document.getElementById("nuevoPost").value.trim();
+
+  if (!autor) {
+    alert("Primero debes iniciar sesión");
+    return;
+  }
+
+  if (!texto) {
+    alert("Escribe algo antes de publicar");
+    return;
+  }
+
+  let posts = obtenerPosts();
+
+  posts.unshift({
+    autor: autor,
+    texto: texto,
+    fecha: new Date().toLocaleString("es-MX"),
+    likes: [],
+    comentarios: []
+  });
+
+  localStorage.setItem("mw_publicaciones", JSON.stringify(posts));
+
+  document.getElementById("nuevoPost").value = "";
+  mostrarMuro();
+}
+
+function mostrarMuro() {
+  let posts = obtenerPosts();
+  let muro = document.getElementById("muro");
+  let usuario = localStorage.getItem("mw_sesion");
+
+  muro.innerHTML = "";
+
+  posts.forEach((post, i) => {
+    let tarjeta = document.createElement("div");
+    tarjeta.style.padding = "12px";
+    tarjeta.style.marginTop = "15px";
+    tarjeta.style.background = "#334155";
+    tarjeta.style.borderRadius = "8px";
+
+    let autor = document.createElement("strong");
+    autor.textContent = "👤 " + post.autor;
+
+    let fecha = document.createElement("small");
+    fecha.textContent = post.fecha;
+
+    let texto = document.createElement("p");
+    texto.textContent = post.texto;
+
+    let boton = document.createElement("button");
+    boton.textContent = "❤️ Me gusta (" + post.likes.length + ")";
+    boton.onclick = () => darLike(i);
+
+    let comentar = document.createElement("button");
+    comentar.textContent = "💬 Comentar";
+    comentar.onclick = () => comentarPost(i);
+
+    tarjeta.append(autor, document.createElement("br"), fecha,
+      texto, boton, comentar);
+
+    post.comentarios.forEach(c => {
+      let comentario = document.createElement("p");
+      comentario.textContent = "💬 " + c.autor + ": " + c.texto;
+      tarjeta.appendChild(comentario);
+    });
+
+    muro.appendChild(tarjeta);
+  });
+
+  if (posts.length === 0) {
+    muro.textContent = "Todavía no hay publicaciones.";
+  }
+}
+
+function darLike(indice) {
+  let usuario = localStorage.getItem("mw_sesion");
+
+  if (!usuario) {
+    alert("Inicia sesión primero");
+    return;
+  }
+
+  let posts = obtenerPosts();
+  let likes = posts[indice].likes;
+
+  if (likes.includes(usuario)) {
+    posts[indice].likes = likes.filter(u => u !== usuario);
+  } else {
+    likes.push(usuario);
+  }
+
+  localStorage.setItem("mw_publicaciones", JSON.stringify(posts));
+  mostrarMuro();
+}
+
+function comentarPost(indice) {
+  let usuario = localStorage.getItem("mw_sesion");
+
+  if (!usuario) {
+    alert("Inicia sesión primero");
+    return;
+  }
+
+  let texto = prompt("Escribe tu comentario:");
+
+  if (!texto || !texto.trim()) return;
+
+  let posts = obtenerPosts();
+
+  posts[indice].comentarios.push({
+    autor: usuario,
+    texto: texto.trim()
+  });
+
+  localStorage.setItem("mw_publicaciones", JSON.stringify(posts));
+  mostrarMuro();
+}
+
+
+function mostrarPerfil() {
+  let nombre = localStorage.getItem("mw_sesion");
+  let cuenta = usuarios().find(u => u.nombre === nombre);
+
+  if (!cuenta) return;
+
+  document.getElementById("registro").classList.add("hidden");
+  document.getElementById("inicio").classList.add("hidden");
+  document.getElementById("perfil").classList.remove("hidden");
+
+  document.getElementById("saludo").textContent =
+    "¡Bienvenido a MIX WORLD, " + cuenta.nombre + "!";
+
+  document.getElementById("descripcion").value =
+    cuenta.descripcion;
+}
+
+function guardarPerfil() {
+  let nombre = localStorage.getItem("mw_sesion");
+  let lista = usuarios();
+  let cuenta = lista.find(u => u.nombre === nombre);
+
+  if (!cuenta) return;
+
+  cuenta.descripcion = document.getElementById("descripcion").value;
+
+  localStorage.setItem("mw_usuarios", JSON.stringify(lista));
+
+  document.getElementById("estado").textContent =
+    "Perfil guardado correctamente";
+}
+
+function salir() {
+  localStorage.removeItem("mw_sesion");
+  location.reload();
+}
+
+mostrarPerfil();
+mostrarUsuarios();
+mostrarMuro();
+</script>
+
+</body>
+</html>
